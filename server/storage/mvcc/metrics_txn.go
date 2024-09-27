@@ -26,14 +26,15 @@ type metricsTxnWrite struct {
 	puts    uint
 	deletes uint
 	putSize int64
+	putSizeList []int64
 }
 
 func newMetricsTxnRead(tr TxnRead) TxnRead {
-	return &metricsTxnWrite{&txnReadWrite{tr}, 0, 0, 0, 0}
+	return &metricsTxnWrite{&txnReadWrite{tr}, 0, 0, 0, 0,[]int64{}}
 }
 
 func newMetricsTxnWrite(tw TxnWrite) TxnWrite {
-	return &metricsTxnWrite{tw, 0, 0, 0, 0}
+	return &metricsTxnWrite{tw, 0, 0, 0, 0,[]int64{}}
 }
 
 func (tw *metricsTxnWrite) Range(ctx context.Context, key, end []byte, ro RangeOptions) (*RangeResult, error) {
@@ -50,6 +51,7 @@ func (tw *metricsTxnWrite) Put(key, value []byte, lease lease.LeaseID) (rev int6
 	tw.puts++
 	size := int64(len(key) + len(value))
 	tw.putSize += size
+	tw.putSizeList=append(tw.putSizeList, size)
 	return tw.TxnWrite.Put(key, value, lease)
 }
 
@@ -68,4 +70,8 @@ func (tw *metricsTxnWrite) End() {
 
 	deletes := float64(tw.deletes)
 	deleteCounter.Add(deletes)
+	
+	for _,size:=range tw.putSizeList {
+		totalPutSizeBucket.Observe(float64(size))
+	}
 }

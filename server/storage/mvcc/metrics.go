@@ -265,6 +265,18 @@ var (
 			Name:      "total_put_size_in_bytes",
 			Help:      "The total size of put kv pairs seen by this member.",
 		})
+
+	totalPutSizeBucket = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Namespace: "etcd",
+		Subsystem: "mvcc",
+		Name:      "total_put_size_in_byte",
+		Help:      "The key and value size distribution.",
+
+		// recommendedMaxRequestBytes is 10MB,
+		// lowest bucket start of upper bound 2 byte with factor 2
+		// highest bucket start of 2 byte * 2^23 = 16MB
+		Buckets: prometheus.ExponentialBuckets(2, 2, 24),
+	})
 )
 
 func init() {
@@ -291,6 +303,7 @@ func init() {
 	prometheus.MustRegister(currentRev)
 	prometheus.MustRegister(compactRev)
 	prometheus.MustRegister(totalPutSizeGauge)
+	prometheus.MustRegister(totalPutSizeBucket)
 }
 
 // ReportEventReceived reports that an event is received.
